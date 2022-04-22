@@ -1,0 +1,118 @@
+Description: A template for creating EC2 instance with security group configured with ssh, https and rdp
+
+Parameters:
+  KeyName:
+    Description: EC2 instance SSH key
+    Type: AWS::EC2::KeyPair::KeyName
+
+  InstanceType:
+    Description: EC2 instance type
+    ConstraintDescription: Must be a valid EC2 instance type.
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.nano
+      - t2.micro
+      - t2.small
+      - t2.medium
+      - t2.large
+
+Mappings:
+  AWSInstanceType2Arch:
+    t2.micro:
+      Arch: HVM64
+    t2.nano:
+      Arch: HVM64
+    t2.small:
+      Arch: HVM64
+    t2.medium:
+      Arch: HVM64
+    t2.large:
+      Arch: HVM64
+
+  AWSInstanceType2NATArch:
+    t2.large:
+      Arch: NATHVM64
+    t2.medium:
+      Arch: NATHVM64
+    t2.micro:
+      Arch: NATHVM64
+    t2.nano:
+      Arch: NATHVM64
+    t2.small:
+      Arch: NATHVM64
+
+  AWSRegionArch2AMI:
+    us-east-1:
+      HVM64: ami-60b6c60a
+      HVMG2: ami-e998ea83
+      PV64: ami-5fb8c835
+    us-west-1:
+      HVM64: ami-d5ea86b5
+      HVMG2: ami-943956f4
+      PV64: ami-56ea8636
+    us-west-2:
+      HVM64: ami-f0091d91
+      HVMG2: ami-315f4850
+      PV64: ami-d93622b8
+    
+Resources:
+  EC2InstanceWeek0:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref KeyName
+      SecurityGroups:
+      - !Ref SSHSecurityGroup
+      - !Ref HTTPSecurityGroup
+      - !Ref RDPSecurityGroup
+      InstanceType:
+        !Ref InstanceType
+      ImageId:
+        !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch, !Ref InstanceType, Arch]]     
+      Tags:
+        - Key: Name
+          Value: MyEc2InstanceForWeek0
+        - Key: Group
+          Value: MyAwsExploration
+
+  HTTPSecurityGroup:
+    Description: Security group configured for http access 
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access via port 80
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: '80'
+        ToPort: '80'
+
+  SSHSecurityGroup:
+    Description: Security group configured for ssh access 
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP access via port 22
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        CidrIp: 0.0.0.0/0
+        FromPort: '22'
+        ToPort: '22'
+
+  RDPSecurityGroup:
+    Description: Security group configured for rdp access 
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allows inbound RDP traffic (TCP port 3389).
+      SecurityGroupIngress:
+      - FromPort: 3389
+        ToPort: 3389
+        IpProtocol: "tcp"
+        Description: "Allow RDP traffic"
+        CidrIp: 0.0.0.0/0
+
+Outputs:
+  PublicIp:
+    Description: EC2 instance public ip
+    Value: !GetAtt EC2InstanceWeek0.PublicIp
+  AmiId: 
+    Description: Return the name of the AMI ID that matches the region and instance type keys
+    Value: !FindInMap [AWSRegionArch2AMI, !Ref "AWS::Region", !FindInMap [AWSInstanceType2Arch, !Ref InstanceType, Arch]]
